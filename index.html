@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Algorithm Rush – Master the Algorithm, Go Viral</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    * {
+      font-family: 'Nunito', sans-serif;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .app-wrapper {
+      min-height: 100%;
+      width: 100%;
+      background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+    }
+    
+    /* Board space styling */
+    .board-space {
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .board-space:hover {
+      transform: scale(1.05);
+      z-index: 10;
+    }
+    
+    /* Zone colors */
+    .zone-1 { background: #d1fae5; border-color: #6ee7b7; }
+    .zone-2 { background: #dbeafe; border-color: #93c5fd; }
+    .zone-3 { background: #fed7aa; border-color: #fdba74; }
+    .zone-4 { background: #fecaca; border-color: #fca5a5; }
+    
+    /* Player tokens */
+    .player-token {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      position: absolute;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      z-index: 20;
+    }
+    
+    .token-p1 { background: #ef4444; }
+    .token-p2 { background: #3b82f6; }
+    .token-p3 { background: #22c55e; }
+    .token-p4 { background: #a855f7; }
+    
+    /* Dice animation */
+    @keyframes roll {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(90deg) scale(1.1); }
+      50% { transform: rotate(180deg) scale(1); }
+      75% { transform: rotate(270deg) scale(1.1); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+    
+    .dice-rolling {
+      animation: roll 0.5s ease-in-out;
+    }
+    
+    /* Modal animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .modal-content {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    /* Viral mode glow */
+    @keyframes viralPulse {
+      0%, 100% { box-shadow: 0 0 5px #f97316, 0 0 10px #f97316; }
+      50% { box-shadow: 0 0 15px #f97316, 0 0 25px #f97316; }
+    }
+    
+    .viral-active {
+      animation: viralPulse 1s infinite;
+    }
+    
+    /* Current player highlight */
+    @keyframes currentPulse {
+      0%, 100% { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+      50% { box-shadow: 0 8px 15px -3px rgba(59, 130, 246, 0.5); }
+    }
+    
+    .current-player {
+      animation: currentPulse 1.5s infinite;
+    }
+    
+    /* Game log scroll */
+    .game-log {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .game-log::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .game-log::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+    
+    .game-log::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    
+    /* Board grid layout for spiral */
+    .board-container {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: 4px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    
+    @media (max-width: 768px) {
+      .board-container {
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2px;
+      }
+      
+      .board-space {
+        font-size: 0.6rem;
+        padding: 2px;
+      }
+      
+      .player-token {
+        width: 14px;
+        height: 14px;
+      }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full overflow-auto">
+  <div class="app-wrapper">
+   <!-- Setup Screen -->
+   <div id="setup-screen" class="min-h-full flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+     <div class="text-center mb-8">
+      <h1 id="game-title" class="text-3xl font-extrabold text-gray-800 mb-2">🚀 Algorithm Rush</h1>
+      <p class="text-gray-500">Master the Algorithm, Go Viral!</p>
+     </div>
+     <div class="mb-6">
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Number of Players</label>
+      <div class="flex gap-2">
+       <button onclick="setPlayerCount(2)" class="player-count-btn flex-1 py-3 rounded-lg border-2 border-gray-200 font-bold transition hover:border-blue-400" data-count="2">2</button> <button onclick="setPlayerCount(3)" class="player-count-btn flex-1 py-3 rounded-lg border-2 border-gray-200 font-bold transition hover:border-blue-400" data-count="3">3</button> <button onclick="setPlayerCount(4)" class="player-count-btn flex-1 py-3 rounded-lg border-2 border-gray-200 font-bold transition hover:border-blue-400" data-count="4">4</button>
+      </div>
+     </div>
+     <div id="player-names" class="space-y-3 mb-6"></div><button onclick="startGame()" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02]"> 🎮 Start Game </button>
+    </div>
+   </div><!-- Game Screen -->
+   <div id="game-screen" class="hidden min-h-full">
+    <div class="flex flex-col lg:flex-row min-h-full">
+     <!-- Board Section -->
+     <div class="flex-1 p-4 lg:p-6">
+      <div class="bg-white rounded-2xl shadow-lg p-4 lg:p-6">
+       <div class="text-center mb-4">
+        <h2 id="game-title-display" class="text-xl lg:text-2xl font-bold text-gray-800">🚀 Algorithm Rush</h2>
+        <p class="text-sm text-gray-500">First to 100K followers wins!</p>
+       </div><!-- Legend -->
+       <div class="flex flex-wrap justify-center gap-2 mb-4 text-xs">
+        <span class="px-2 py-1 bg-green-100 rounded">❤️ Growth</span> <span class="px-2 py-1 bg-red-100 rounded">⚠️ Penalty</span> <span class="px-2 py-1 bg-blue-100 rounded">⚙️ Algorithm</span> <span class="px-2 py-1 bg-orange-100 rounded">🔥 Viral</span>
+       </div><!-- Board -->
+       <div id="board" class="board-container"></div>
+      </div>
+     </div><!-- Sidebar -->
+     <div class="lg:w-80 p-4 lg:p-6 lg:pl-0">
+      <div class="space-y-4">
+       <!-- Dice Area -->
+       <div class="bg-white rounded-2xl shadow-lg p-4 text-center">
+        <div id="dice" class="w-20 h-20 mx-auto bg-white border-4 border-gray-200 rounded-xl flex items-center justify-center text-4xl font-bold text-gray-700 mb-4">
+         🎲
+        </div>
+        <p id="turn-indicator" class="text-sm text-gray-600 mb-3">Player 1's Turn</p><button id="roll-btn" onclick="rollDice()" class="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-[1.02]"> 🎲 Roll Dice </button>
+       </div><!-- Players Panel -->
+       <div class="bg-white rounded-2xl shadow-lg p-4">
+        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><span>👥</span> Players</h3>
+        <div id="players-panel" class="space-y-2"></div>
+       </div><!-- Game Log -->
+       <div class="bg-white rounded-2xl shadow-lg p-4">
+        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><span>📋</span> Game Log</h3>
+        <div id="game-log" class="game-log space-y-1 text-xs text-gray-600"></div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div><!-- Card Modal -->
+   <div id="card-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="modal-content bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+     <div class="text-5xl mb-4">
+      ⚙️
+     </div>
+     <h3 class="text-xl font-bold text-gray-800 mb-2">Algorithm Card</h3>
+     <p id="card-title" class="text-lg font-semibold text-blue-600 mb-2"></p>
+     <p id="card-effect" class="text-gray-600 mb-4"></p><button onclick="closeCardModal()" class="w-full bg-blue-500 text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition"> Continue </button>
+    </div>
+   </div><!-- Winner Modal -->
+   <div id="winner-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="modal-content bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+     <div class="text-6xl mb-4">
+      🏆
+     </div>
+     <h3 class="text-2xl font-bold text-gray-800 mb-2">We Have a Winner!</h3>
+     <p id="winner-name" class="text-xl font-semibold text-purple-600 mb-1"></p>
+     <p id="winner-followers" class="text-gray-600 mb-6"></p><button onclick="restartGame()" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:shadow-xl transition"> 🔄 Play Again </button>
+    </div>
+   </div>
+  </div>
+  <script>
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const defaultConfig = {
+      game_title: 'Algorithm Rush'
+    };
+    
+    let config = { ...defaultConfig };
+    
+    // Initialize Element SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (newConfig) => {
+          config = { ...defaultConfig, ...newConfig };
+          updateUI();
+        },
+        mapToCapabilities: (cfg) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (cfg) => new Map([
+          ['game_title', cfg.game_title || defaultConfig.game_title]
+        ])
+      });
+    }
+    
+    function updateUI() {
+      const title = config.game_title || defaultConfig.game_title;
+      const titleEl = document.getElementById('game-title');
+      const titleDisplayEl = document.getElementById('game-title-display');
+      if (titleEl) titleEl.textContent = `🚀 ${title}`;
+      if (titleDisplayEl) titleDisplayEl.textContent = `🚀 ${title}`;
+    }
+    
+    // ============================================
+    // ALGORITHM CARDS - 15+ unique cards
+    // ============================================
+    const algorithmCards = [
+      { title: "Trending Audio 🎵", effect: "+10,000 followers", value: 10000, type: "gain" },
+      { title: "Collaboration 🤝", effect: "Double your next gain!", value: 0, type: "double" },
+      { title: "Shadow Ban 🚫", effect: "Skip your next turn", value: 0, type: "skip" },
+      { title: "Low Engagement 📉", effect: "-5,000 followers", value: -5000, type: "loss" },
+      { title: "Platform Update 🔄", effect: "All players -2,000 followers", value: -2000, type: "all_loss" },
+      { title: "Peak Time Post ⏰", effect: "+7,000 followers", value: 7000, type: "gain" },
+      { title: "Algorithm Reset ⚡", effect: "Reset viral meter to 0", value: 0, type: "reset_viral" },
+      { title: "Viral Challenge 💃", effect: "+12,000 followers", value: 12000, type: "gain" },
+      { title: "Copyright Strike ⚖️", effect: "-8,000 followers", value: -8000, type: "loss" },
+      { title: "Brand Deal 💰", effect: "+15,000 followers", value: 15000, type: "gain" },
+      { title: "Hate Comments 😡", effect: "-3,000 followers", value: -3000, type: "loss" },
+      { title: "Perfect Hashtags #️⃣", effect: "+6,000 followers", value: 6000, type: "gain" },
+      { title: "Server Outage 💥", effect: "Everyone skips next turn", value: 0, type: "all_skip" },
+      { title: "Repost Boost 🔁", effect: "+8,500 followers", value: 8500, type: "gain" },
+      { title: "Influencer Shoutout ⭐", effect: "+20,000 followers", value: 20000, type: "gain" }
+    ];
+    
+    // ============================================
+    // BOARD SPACES - 40 spaces with types
+    // ============================================
+    function generateSpaces() {
+      const spaces = [];
+      const types = ['growth', 'penalty', 'algorithm', 'viral'];
+      const icons = { growth: '❤️', penalty: '⚠️', algorithm: '⚙️', viral: '🔥' };
+      const labels = { growth: 'Growth', penalty: 'Penalty', algorithm: 'Algorithm', viral: 'Viral' };
+      
+      for (let i = 1; i <= 40; i++) {
+        // Distribute types: growth most common, then algorithm, viral, penalty
+        let type;
+        if (i % 10 === 0) type = 'viral';
+        else if (i % 5 === 0) type = 'algorithm';
+        else if (i % 7 === 0) type = 'penalty';
+        else type = 'growth';
+        
+        // Determine zone (1-10, 11-20, 21-30, 31-40)
+        let zone;
+        if (i <= 10) zone = 1;
+        else if (i <= 20) zone = 2;
+        else if (i <= 30) zone = 3;
+        else zone = 4;
+        
+        spaces.push({
+          number: i,
+          type: type,
+          icon: icons[type],
+          label: labels[type],
+          zone: zone
+        });
+      }
+      return spaces;
+    }
+    
+    const boardSpaces = generateSpaces();
+    
+    // ============================================
+    // PLAYER CLASS
+    // ============================================
+    class Player {
+      constructor(id, name, color) {
+        this.id = id;
+        this.name = name;
+        this.color = color;
+        this.position = 0; // 0 = start, 1-40 = board spaces
+        this.followers = 0;
+        this.viralMeter = 0;
+        this.skipTurn = false;
+        this.viralModeActive = false;
+        this.viralModeTurns = 0;
+        this.doubleNextGain = false;
+      }
+      
+      addFollowers(amount) {
+        let finalAmount = amount;
+        
+        // Apply viral mode bonus
+        if (this.viralModeActive && amount > 0) {
+          finalAmount = amount * 2;
+        }
+        
+        // Apply double next gain
+        if (this.doubleNextGain && amount > 0) {
+          finalAmount = finalAmount * 2;
+          this.doubleNextGain = false;
+        }
+        
+        // Immune to penalties in viral mode
+        if (this.viralModeActive && amount < 0) {
+          return 0;
+        }
+        
+        this.followers = Math.max(0, this.followers + finalAmount);
+        
+        // Check viral momentum
+        if (finalAmount >= 4000) {
+          this.viralMeter++;
+          if (this.viralMeter >= 3) {
+            this.activateViralMode();
+          }
+        }
+        
+        return finalAmount;
+      }
+      
+      activateViralMode() {
+        this.viralModeActive = true;
+        this.viralModeTurns = 2;
+        this.viralMeter = 0;
+      }
+      
+      endTurn() {
+        if (this.viralModeActive) {
+          this.viralModeTurns--;
+          if (this.viralModeTurns <= 0) {
+            this.viralModeActive = false;
+          }
+        }
+      }
+    }
+    
+    // ============================================
+    // GAME STATE
+    // ============================================
+    const gameState = {
+      players: [],
+      currentPlayerIndex: 0,
+      gameStarted: false,
+      isRolling: false,
+      playerCount: 2
+    };
+    
+    const playerColors = ['#ef4444', '#3b82f6', '#22c55e', '#a855f7'];
+    const playerColorClasses = ['token-p1', 'token-p2', 'token-p3', 'token-p4'];
+    
+    // ============================================
+    // SETUP FUNCTIONS
+    // ============================================
+    function setPlayerCount(count) {
+      gameState.playerCount = count;
+      
+      // Update button styles
+      document.querySelectorAll('.player-count-btn').forEach(btn => {
+        if (parseInt(btn.dataset.count) === count) {
+          btn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-600');
+        } else {
+          btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-600');
+        }
+      });
+      
+      // Generate name inputs
+      const container = document.getElementById('player-names');
+      container.innerHTML = '';
+      
+      for (let i = 0; i < count; i++) {
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2';
+        div.innerHTML = `
+          <div class="w-4 h-4 rounded-full" style="background: ${playerColors[i]}"></div>
+          <input type="text" 
+                 id="player-name-${i}" 
+                 placeholder="Player ${i + 1} name"
+                 class="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition"
+                 value="Player ${i + 1}">
+        `;
+        container.appendChild(div);
+      }
+    }
+    
+    function startGame() {
+      // Create players
+      gameState.players = [];
+      for (let i = 0; i < gameState.playerCount; i++) {
+        const nameInput = document.getElementById(`player-name-${i}`);
+        const name = nameInput?.value?.trim() || `Player ${i + 1}`;
+        gameState.players.push(new Player(i, name, playerColors[i]));
+      }
+      
+      gameState.currentPlayerIndex = 0;
+      gameState.gameStarted = true;
+      
+      // Switch screens
+      document.getElementById('setup-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.remove('hidden');
+      
+      // Render board and UI
+      renderBoard();
+      updatePlayersPanel();
+      updateTurnIndicator();
+      addLog(`🎮 Game started with ${gameState.playerCount} players!`);
+    }
+    
+    // ============================================
+    // BOARD RENDERING
+    // ============================================
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      
+      // Spiral layout positions (8x6 grid)
+      // Define the spiral path for 40 spaces
+      const spiralPath = [
+        // Bottom row left to right (1-8)
+        [5,0], [5,1], [5,2], [5,3], [5,4], [5,5], [5,6], [5,7],
+        // Right column bottom to top (9-13)
+        [4,7], [3,7], [2,7], [1,7], [0,7],
+        // Top row right to left (14-20)
+        [0,6], [0,5], [0,4], [0,3], [0,2], [0,1], [0,0],
+        // Left column top to bottom (21-25)
+        [1,0], [2,0], [3,0], [4,0],
+        // Inner bottom row (26-30)
+        [4,1], [4,2], [4,3], [4,4], [4,5], [4,6],
+        // Inner right up (31-32)
+        [3,6], [2,6],
+        // Inner top row (33-36)
+        [1,6], [1,5], [1,4], [1,3], [1,2], [1,1],
+        // Inner left down and center (37-40)
+        [2,1], [3,1], [3,2], [3,3]
+      ];
+      
+      // Create a map of grid positions
+      const gridMap = {};
+      spiralPath.forEach((pos, index) => {
+        if (index < 40) {
+          const key = `${pos[0]}-${pos[1]}`;
+          gridMap[key] = boardSpaces[index];
+        }
+      });
+      
+      // Render 6x8 grid
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 8; col++) {
+          const key = `${row}-${col}`;
+          const space = gridMap[key];
+          
+          if (space) {
+            const spaceEl = document.createElement('div');
+            spaceEl.className = `board-space zone-${space.zone} border-2 rounded-lg p-1 lg:p-2 text-center cursor-default`;
+            spaceEl.id = `space-${space.number}`;
+            spaceEl.innerHTML = `
+              <div class="text-xs lg:text-sm font-bold text-gray-700">${space.number}</div>
+              <div class="text-lg lg:text-xl">${space.icon}</div>
+              <div class="text-[8px] lg:text-xs text-gray-500 hidden lg:block">${space.label}</div>
+            `;
+            board.appendChild(spaceEl);
+          } else {
+            // Empty cell
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'bg-gray-50 rounded-lg border border-gray-100';
+            board.appendChild(emptyEl);
+          }
+        }
+      }
+      
+      // Add player tokens
+      gameState.players.forEach(player => {
+        const token = document.createElement('div');
+        token.className = `player-token ${playerColorClasses[player.id]}`;
+        token.id = `token-${player.id}`;
+        token.title = player.name;
+        board.appendChild(token);
+      });
+      
+      // Position tokens
+      updateTokenPositions();
+    }
+    
+    function updateTokenPositions() {
+      // Group players by position
+      const positionGroups = {};
+      gameState.players.forEach(player => {
+        if (!positionGroups[player.position]) {
+          positionGroups[player.position] = [];
+        }
+        positionGroups[player.position].push(player);
+      });
+      
+      // Position each token
+      Object.keys(positionGroups).forEach(pos => {
+        const players = positionGroups[pos];
+        const position = parseInt(pos);
+        
+        let targetElement;
+        if (position === 0) {
+          // Start position - place near space 1
+          targetElement = document.getElementById('space-1');
+        } else {
+          targetElement = document.getElementById(`space-${position}`);
+        }
+        
+        if (targetElement) {
+          players.forEach((player, index) => {
+            const token = document.getElementById(`token-${player.id}`);
+            if (token) {
+              // Position token absolutely within the target space
+              token.style.position = 'absolute';
+              
+              // Calculate offset for multiple players on same space
+              const offsetX = (index % 2) * 10 - 5;
+              const offsetY = Math.floor(index / 2) * 10 - 5;
+              
+              // Get the space's position relative to the board
+              const spaceRect = targetElement.getBoundingClientRect();
+              const boardRect = document.getElementById('board').parentElement.getBoundingClientRect();
+              
+              // Calculate position relative to viewport, then adjust for board offset
+              const left = spaceRect.left - boardRect.left + spaceRect.width / 2 - 10 + offsetX;
+              const top = spaceRect.top - boardRect.top + spaceRect.height / 2 - 10 + offsetY;
+              
+              token.style.left = `${left}px`;
+              token.style.top = `${top}px`;
+            }
+          });
+        }
+      });
+    }
+    
+    // ============================================
+    // PLAYERS PANEL
+    // ============================================
+    function updatePlayersPanel() {
+      const panel = document.getElementById('players-panel');
+      panel.innerHTML = '';
+      
+      gameState.players.forEach((player, index) => {
+        const isCurrentPlayer = index === gameState.currentPlayerIndex;
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl border-2 transition ${isCurrentPlayer ? 'current-player border-blue-400 bg-blue-50' : 'border-gray-100 bg-gray-50'} ${player.viralModeActive ? 'viral-active' : ''}`;
+        
+        let status = 'Normal';
+        if (player.skipTurn) status = '⏭️ Skipped';
+        else if (player.viralModeActive) status = `🔥 Viral Mode (${player.viralModeTurns} turns)`;
+        
+        div.innerHTML = `
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-4 h-4 rounded-full" style="background: ${player.color}"></div>
+            <span class="font-bold text-gray-800 text-sm">${player.name}</span>
+            ${isCurrentPlayer ? '<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full ml-auto">Turn</span>' : ''}
+          </div>
+          <div class="grid grid-cols-2 gap-1 text-xs">
+            <div class="text-gray-500">Followers:</div>
+            <div class="font-bold text-gray-700">${formatNumber(player.followers)}</div>
+            <div class="text-gray-500">Viral Meter:</div>
+            <div class="font-bold">${'🔥'.repeat(player.viralMeter)}${'⚪'.repeat(3 - player.viralMeter)}</div>
+            <div class="text-gray-500">Status:</div>
+            <div class="font-semibold ${player.viralModeActive ? 'text-orange-500' : 'text-gray-600'}">${status}</div>
+          </div>
+        `;
+        panel.appendChild(div);
+      });
+    }
+    
+    function updateTurnIndicator() {
+      const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+      document.getElementById('turn-indicator').textContent = `${currentPlayer.name}'s Turn`;
+    }
+    
+    // ============================================
+    // DICE ROLLING
+    // ============================================
+    async function rollDice() {
+      if (gameState.isRolling) return;
+      
+      const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+      
+      // Check if player should skip turn
+      if (currentPlayer.skipTurn) {
+        currentPlayer.skipTurn = false;
+        addLog(`⏭️ ${currentPlayer.name} skips their turn!`);
+        nextTurn();
+        return;
+      }
+      
+      gameState.isRolling = true;
+      document.getElementById('roll-btn').disabled = true;
+      
+      const dice = document.getElementById('dice');
+      const diceValue = Math.floor(Math.random() * 6) + 1;
+      
+      // Animate dice
+      dice.classList.add('dice-rolling');
+      dice.textContent = '🎲';
+      
+      await sleep(500);
+      
+      dice.classList.remove('dice-rolling');
+      dice.textContent = diceValue;
+      
+      addLog(`🎲 ${currentPlayer.name} rolled a ${diceValue}!`);
+      
+      // Move player
+      await movePlayer(currentPlayer, diceValue);
+      
+      // Resolve space effect
+      await resolveSpace(currentPlayer);
+      
+      // End player's turn
+      currentPlayer.endTurn();
+      
+      // Check win condition
+      if (currentPlayer.followers >= 100000) {
+        showWinner(currentPlayer);
+        return;
+      }
+      
+      nextTurn();
+    }
+    
+    async function movePlayer(player, steps) {
+      for (let i = 0; i < steps; i++) {
+        player.position++;
+        if (player.position > 40) {
+          player.position = 1; // Loop back to start of board
+        }
+        updateTokenPositions();
+        await sleep(200);
+      }
+    }
+    
+    // ============================================
+    // SPACE RESOLUTION
+    // ============================================
+    async function resolveSpace(player) {
+      const space = boardSpaces[player.position - 1];
+      if (!space) return;
+      
+      switch (space.type) {
+        case 'growth':
+          const growthGain = randomRange(1000, 5000);
+          const actualGain = player.addFollowers(growthGain);
+          addLog(`❤️ ${player.name} gained ${formatNumber(actualGain)} followers!`);
+          break;
+          
+        case 'penalty':
+          const penaltyLoss = randomRange(500, 3000);
+          if (player.viralModeActive) {
+            addLog(`⚠️ ${player.name} is immune to penalty (Viral Mode)!`);
+          } else {
+            player.addFollowers(-penaltyLoss);
+            addLog(`⚠️ ${player.name} lost ${formatNumber(penaltyLoss)} followers!`);
+          }
+          break;
+          
+        case 'algorithm':
+          await drawAlgorithmCard(player);
+          break;
+          
+        case 'viral':
+          const viralGain = randomRange(4000, 8000);
+          const actualViralGain = player.addFollowers(viralGain);
+          addLog(`🔥 ${player.name} went viral! +${formatNumber(actualViralGain)} followers!`);
+          break;
+      }
+      
+      updatePlayersPanel();
+    }
+    
+    // ============================================
+    // ALGORITHM CARDS
+    // ============================================
+    async function drawAlgorithmCard(player) {
+      const card = algorithmCards[Math.floor(Math.random() * algorithmCards.length)];
+      
+      // Show card modal
+      document.getElementById('card-title').textContent = card.title;
+      document.getElementById('card-effect').textContent = card.effect;
+      document.getElementById('card-modal').classList.remove('hidden');
+      
+      // Wait for modal close
+      await waitForModalClose();
+      
+      // Apply card effect
+      switch (card.type) {
+        case 'gain':
+          const gain = player.addFollowers(card.value);
+          addLog(`⚙️ ${card.title}: ${player.name} gained ${formatNumber(gain)} followers!`);
+          break;
+          
+        case 'loss':
+          if (player.viralModeActive) {
+            addLog(`⚙️ ${card.title}: ${player.name} is immune (Viral Mode)!`);
+          } else {
+            player.addFollowers(card.value);
+            addLog(`⚙️ ${card.title}: ${player.name} lost ${formatNumber(Math.abs(card.value))} followers!`);
+          }
+          break;
+          
+        case 'double':
+          player.doubleNextGain = true;
+          addLog(`⚙️ ${card.title}: ${player.name}'s next gain will be doubled!`);
+          break;
+          
+        case 'skip':
+          player.skipTurn = true;
+          addLog(`⚙️ ${card.title}: ${player.name} will skip their next turn!`);
+          break;
+          
+        case 'all_loss':
+          gameState.players.forEach(p => {
+            if (!p.viralModeActive) {
+              p.addFollowers(card.value);
+            }
+          });
+          addLog(`⚙️ ${card.title}: All players lost ${formatNumber(Math.abs(card.value))} followers!`);
+          break;
+          
+        case 'all_skip':
+          gameState.players.forEach(p => {
+            if (p.id !== player.id) {
+              p.skipTurn = true;
+            }
+          });
+          addLog(`⚙️ ${card.title}: All other players will skip their next turn!`);
+          break;
+          
+        case 'reset_viral':
+          player.viralMeter = 0;
+          addLog(`⚙️ ${card.title}: ${player.name}'s viral meter was reset!`);
+          break;
+      }
+    }
+    
+    let modalResolve = null;
+    
+    function waitForModalClose() {
+      return new Promise(resolve => {
+        modalResolve = resolve;
+      });
+    }
+    
+    function closeCardModal() {
+      document.getElementById('card-modal').classList.add('hidden');
+      if (modalResolve) {
+        modalResolve();
+        modalResolve = null;
+      }
+    }
+    
+    // ============================================
+    // TURN MANAGEMENT
+    // ============================================
+    function nextTurn() {
+      gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+      gameState.isRolling = false;
+      document.getElementById('roll-btn').disabled = false;
+      updatePlayersPanel();
+      updateTurnIndicator();
+    }
+    
+    // ============================================
+    // WIN CONDITION
+    // ============================================
+    function showWinner(player) {
+      document.getElementById('winner-name').textContent = `🎉 ${player.name} Wins!`;
+      document.getElementById('winner-followers').textContent = `Final count: ${formatNumber(player.followers)} followers`;
+      document.getElementById('winner-modal').classList.remove('hidden');
+      addLog(`🏆 ${player.name} wins with ${formatNumber(player.followers)} followers!`);
+    }
+    
+    function restartGame() {
+      document.getElementById('winner-modal').classList.add('hidden');
+      document.getElementById('game-screen').classList.add('hidden');
+      document.getElementById('setup-screen').classList.remove('hidden');
+      
+      // Reset game state
+      gameState.players = [];
+      gameState.currentPlayerIndex = 0;
+      gameState.gameStarted = false;
+      gameState.isRolling = false;
+      
+      // Clear log
+      document.getElementById('game-log').innerHTML = '';
+    }
+    
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function formatNumber(num) {
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      }
+      return num.toString();
+    }
+    
+    function randomRange(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    function addLog(message) {
+      const log = document.getElementById('game-log');
+      const entry = document.createElement('div');
+      entry.className = 'py-1 border-b border-gray-100 last:border-0';
+      entry.textContent = message;
+      log.insertBefore(entry, log.firstChild);
+      
+      // Keep only last 20 entries
+      while (log.children.length > 20) {
+        log.removeChild(log.lastChild);
+      }
+    }
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+      setPlayerCount(2);
+      updateUI();
+    });
+    
+    // Handle window resize for token positions
+    window.addEventListener('resize', () => {
+      if (gameState.gameStarted) {
+        setTimeout(updateTokenPositions, 100);
+      }
+    });
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d6b807e4523ee60',t:'MTc3MjU3MDkwNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
